@@ -1,0 +1,44 @@
+# One-command demo deployment: toolgate in HTTP mode wrapping the bundled
+# demo MCP server. Point your MCP client at http://127.0.0.1:8848/mcp and
+# resolve approvals via http://127.0.0.1:9848 (control API).
+#
+# Swap `examples/policy.yaml` and the downstream command after `--` for your
+# own policy and server. Ports are published on 127.0.0.1 only.
+services:
+  toolgate:
+    build: .
+    image: toolgate:0.1.0
+    init: true
+    command:
+      [
+        "node", "dist/cli.js", "serve",
+        "--policy", "/config/policy.yaml",
+        "--host", "0.0.0.0",
+        "--port", "8848",
+        "--control-host", "0.0.0.0",
+        "--control-port", "9848",
+        "--audit-log", "/data/audit.jsonl",
+        "--", "node", "examples/demo-server.mjs"
+      ]
+    ports:
+      - "127.0.0.1:8848:8848"
+      - "127.0.0.1:9848:9848"
+    volumes:
+      - ./examples/policy.yaml:/config/policy.yaml:ro
+      - toolgate-audit:/data
+    environment:
+      # Set these in a local .env file (see .env.example); never commit secrets.
+      TOOLGATE_SLACK_WEBHOOK_URL: ${TOOLGATE_SLACK_WEBHOOK_URL:-}
+      TOOLGATE_CONTROL_TOKEN: ${TOOLGATE_CONTROL_TOKEN:-}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8848/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  # Audit events (JSONL) survive container restarts; back up this volume to
+  # retain the decision trail.
+  toolgate-audit:

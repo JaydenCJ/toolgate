@@ -1,0 +1,72 @@
+# Example toolgate policy used by the quickstart, smoke test, and compose demo.
+# Every MCP tools/call flowing through the gateway is evaluated against it.
+version: 1
+
+defaults:
+  action: allow
+
+# Per-task budget circuit breaker: one MCP session = one task.
+# Once either ceiling is hit, the breaker trips and the whole task is blocked.
+budget:
+  max_calls: 50
+  max_cost: 2.0
+
+# Cost units per call, matched by tool-name glob; "default" is the fallback.
+costs:
+  send_payment: 0.5
+  default: 0.01
+
+rules:
+  # 1. Secrets must never leave through tool arguments, on any tool.
+  - name: block-secret-egress
+    match: { tools: ["*"] }
+    egress:
+      scan: [request]
+      deny: [aws-access-key, private-key, api-key, github-token]
+
+  # 2. Payments require a human decision within 2 minutes.
+  - name: approve-payments
+    match: { tools: ["send_payment", "transfer_*"] }
+    action: approve
+    reason: "payments move real money and always need a human decision"
+    approval:
+      timeout_seconds: 120
+      on_timeout: deny
+
+  # 3. Destructive file operations are simply not allowed.
+  - name: deny-deletes
+    match: { tools: ["delete_*", "rm_*"] }
+    action: deny
+    reason: "destructive file operations are not allowed for this agent"
+
+  # 4. Keep the noisy search tool under control.
+  - name: rate-limit-search
+    match: { tools: ["search_*"] }
+    rate_limit: { max_calls: 3, per_seconds: 60 }
+
+  # 5. Customer data is readable, but personal contact details are masked
+  #    before the model ever sees them.
+  - name: redact-customer-pii
+    match: { tools: ["read_customer_record"] }
+    egress:
+      scan: [response]
+      redact: [email]
+
+approvals:
+  timeout_seconds: 120
+  on_timeout: deny
+  notify:
+    - type: terminal
+    # Enable Slack cards by exporting TOOLGATE_SLACK_WEBHOOK_URL:
+    # - type: slack
+    #   webhook_url_env: TOOLGATE_SLACK_WEBHOOK_URL
+
+audit:
+  include_args: false # Log only a SHA-256 of arguments by default.
+  sinks:
+    - type: jsonl
+      path: ./toolgate-audit.jsonl
+    # Ship the same stream to a SIEM/webhook collector:
+    # - type: http
+    #   url: https://siem.example.com/ingest
+    #   headers: { authorization: "Bearer REPLACE_ME" }

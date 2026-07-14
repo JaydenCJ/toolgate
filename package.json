@@ -1,0 +1,72 @@
+{
+  "name": "@jaydencj/toolgate",
+  "version": "0.1.0",
+  "description": "Policy-as-code authorization gateway for AI agent tool calls: an MCP proxy that enforces human approval, per-task budget circuit breakers, rate limits, and data-egress rules on every tools/call.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "agent",
+    "authorization",
+    "policy",
+    "guardrails",
+    "gateway",
+    "proxy",
+    "approval",
+    "budget",
+    "rate-limit",
+    "audit",
+    "siem"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "bin": {
+    "toolgate": "dist/cli.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "examples",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "smoke": "bash scripts/smoke.sh",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "yaml": "^2.6.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.10.2",
+    "eslint": "^10.6.0",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.63.0",
+    "vitest": "^4.1.10"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JaydenCJ/toolgate.git"
+  },
+  "homepage": "https://github.com/JaydenCJ/toolgate#readme",
+  "bugs": {
+    "url": "https://github.com/JaydenCJ/toolgate/issues"
+  }
+}
